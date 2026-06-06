@@ -1,92 +1,107 @@
-from fastapi import APIRouter, HTTPException
-from database import db
-from models.user_model import (
-    UserRegister,
-    UserLogin
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException
 )
+
+from sqlalchemy.orm import Session
+
+from database import get_db
+
+from models.user_model import User
+
+from schemas.auth_schema import (
+    RegisterSchema,
+    LoginSchema
+)
+
 from auth import (
     hash_password,
     verify_password,
     create_access_token
 )
 
-router = APIRouter()
-
-users_collection = db["users"]
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"]
+)
 
 # REGISTER
 @router.post("/register")
-def register(user: UserRegister):
-
-    allowed_roles = [
-        "FPO_MANAGER",
-        "CAAS_OPERATOR"
-    ]
-
-    if user.role not in allowed_roles:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid role selected"
-        )
-
-    existing_user = users_collection.find_one({
-        "email": user.email
-    })
+def register(
+    user_data: RegisterSchema,
+    db: Session = Depends(get_db)
+):
+    existing_user = db.query(User).filter(
+        User.email == user_data.email
+    ).first()
 
     if existing_user:
         raise HTTPException(
             status_code=400,
-            detail="User already exists"
+            detail="Email already exists"
         )
 
     hashed_password = hash_password(
-        user.password
+        user_data.password
     )
 
-    user_data = {
-        "name": user.name,
-        "email": user.email,
-        "password": hashed_password,
-        "role": user.role
-    }
+    new_user = User(
+        name=user_data.name,
+        email=user_data.email,
+        password=hashed_password,
+        role=user_data.role
+    )
 
-    users_collection.insert_one(user_data)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return {
-        "message": "User registered successfully"
+        "message": "User Registered Successfully"
     }
+
 
 # LOGIN
 @router.post("/login")
-def login(user: UserLogin):
+def login(
+    user_data: LoginSchema,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(
+        User.email == user_data.email
+    ).first()
 
-    db_user = users_collection.find_one({
-        "email": user.email
-    })
-
-    if not db_user:
+    if not user:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid email"
+            status_code=401,
+            detail="Invalid Email"
         )
 
-    password_valid = verify_password(
-        user.password,
-        db_user["password"]
+    valid_password = verify_password(
+        user_data.password,
+        user.password
     )
 
-    if not password_valid:
+    if not valid_password:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid password"
+            status_code=401,
+            detail="Invalid Password"
         )
 
     token = create_access_token({
-        "user_id": str(db_user["_id"]),
-        "role": db_user["role"]
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "role": user.role
     })
 
     return {
         "access_token": token,
-        "role": db_user["role"]
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
     }

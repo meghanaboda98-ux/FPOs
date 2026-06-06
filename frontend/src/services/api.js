@@ -1,28 +1,33 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://fpos-production-0971.up.railway.app",
+    baseURL: "http://127.0.0.1:8000"
 });
 
 API.interceptors.request.use(
 
-  (config) => {
+    (config) => {
 
-    const token =
-      localStorage.getItem("token");
+        const token =
+            localStorage.getItem("token");
 
-    if (token) {
+        console.log(
+            "TOKEN SENT:",
+            token
+        );
+        if (token) {
 
-      config.headers.Authorization =
-        `Bearer ${token}`;
+            config.headers.Authorization =
+                `Bearer ${token}`;
+        }
+
+        return config;
+    },
+
+    (error) => {
+
+        return Promise.reject(error);
     }
-
-    return config;
-  },
-
-  (error) => {
-    return Promise.reject(error);
-  }
 );
 
 export default API;

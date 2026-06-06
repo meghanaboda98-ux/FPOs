@@ -4,36 +4,34 @@ from fastapi import (
     HTTPException
 )
 
-from database import db
-
-from models.inventory_model import (
-    InventoryCreate
-)
-
+from sqlalchemy.orm import Session
+from database import get_db
+from models.inventory_model import Inventory
+from models.product_model import Product
 from auth import require_role
+from calculations.prediction import (
 
-from calculations.shelf_life import (
-    calculate_quality,
-    estimate_remaining_days
+    predict_quality,
+    predict_spoilage,
+    predict_transport_quality,
+    predict_remaining_shelf_life,
+    calculate_dispatch_priority,
+    check_temperature_status,
+    check_chilling_injury
+
 )
 
 from datetime import datetime
 
-import uuid
-
-
 router = APIRouter()
-
-inventory_collection = db["inventory_batches"]
-
-products_collection = db["product_master"]
-
 
 # ADD INVENTORY
 @router.post("/add")
 def add_inventory(
 
-    inventory: InventoryCreate,
+    inventory_data: dict,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
@@ -44,241 +42,177 @@ def add_inventory(
     )
 ):
 
-    # Find product from product master
-    product = products_collection.find_one({
-        "product_name": inventory.product_name
-    })
+    product = db.query(Product).filter(
+        Product.name == inventory_data["product_name"]
+    ).first()
 
     if not product:
-
         raise HTTPException(
             status_code=404,
             detail="Product not found in product master"
         )
 
-    # Generate batch ID
-    batch_id = str(uuid.uuid4())[:8]
+    current_temperature = product.optimal_temperature
 
-    # New inventory initially has 0 days stored
-    days_stored = 0
+    storage_days = 0
 
-    # Calculate quality
-    quality = calculate_quality(
-
-        model=product["model"],
-
-        k_ref=product["k_ref"],
-
-        Ea=product["Ea"],
-
-        storage_temp=inventory.storage_temp,
-
-        days_stored=days_stored
+    quality = predict_quality(
+        initial_quality=100,
+        model=product.model,
+        k_ref=product.k_ref,
+        Ea=product.Ea,
+        current_temperature=current_temperature,
+        storage_days=storage_days
     )
 
-    # Estimate remaining days
-    remaining_days = estimate_remaining_days(
+    spoilage = predict_spoilage(
+        current_temperature=current_temperature,
+        optimal_temperature=product.optimal_temperature,
+        storage_days=storage_days,
+        shelf_life=product.shelf_life
+    )
 
+    shelf_life_remaining = predict_remaining_shelf_life(
+        shelf_life=product.shelf_life,
+        storage_days=storage_days
+    )
+
+    dispatch_priority = calculate_dispatch_priority(
         quality,
-
-        product["quality_limit"]
+        shelf_life_remaining
     )
 
-    # Determine status
     status = "ACTIVE"
 
-    if remaining_days <= 2:
-
+    if spoilage >= 70:
         status = "CRITICAL"
 
-    elif remaining_days <= 5:
-
+    elif spoilage >= 40:
         status = "WARNING"
 
-    # Create inventory document
-    inventory_data = {
+    inventory = Inventory(
 
-        "batch_id": batch_id,
+        farmer_name=inventory_data["farmer_name"],
 
-        "farmer_name": inventory.farmer_name,
+        phone_number=inventory_data["phone_number"],
 
-        "phone_number": inventory.phone_number,
+        product_name=product.name,
 
-        "product_name": inventory.product_name,
+        category=product.category,
 
-        "category": inventory.category,
+        quantity=inventory_data["quantity"],
 
-        "quantity": inventory.quantity,
+        warehouse_name="Not Assigned",
 
-        "storage_temp": inventory.storage_temp,
+        coldroom_name="Not Assigned",
 
-        "entry_date": inventory.entry_date,
+        current_temperature=current_temperature,
 
-        "quality": quality,
+        humidity=product.humidity,
 
-        "remaining_days": remaining_days,
+        quality=quality,
 
-        "status": status,
+        spoilage=spoilage,
 
-        "created_by": current_user["role"],
+        storage_days=storage_days,
 
-        "created_at": datetime.utcnow()
-    }
+        shelf_life_remaining=shelf_life_remaining,
 
-    # Insert inventory
-    inventory_collection.insert_one(
-        inventory_data
+        dispatch_priority=dispatch_priority,
+
+        status=status
     )
 
+    db.add(inventory)
+
+    db.commit()
+
+    db.refresh(inventory)
+
     return {
-
-        "message": "Inventory added successfully",
-
-        "batch_id": batch_id,
-
-        "quality": quality,
-
-        "remaining_days": remaining_days,
-
-        "status": status
+        "message": "Inventory Added Successfully",
+        "inventory": inventory
     }
 
-
-# GET INVENTORY
+# GET ALL INVENTORY
 @router.get("/all")
 def get_inventory(
 
-    search: str = "",
-
-    status: str = "",
-
-    category: str = "",
-
-    page: int = 1,
-
-    limit: int = 10,
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
             "SUPER_ADMIN",
             "FPO_MANAGER",
-            "CAAS_OPERATOR"
+            "CAAS_OPERATOR",
+            "TRANSPORTER"
         ])
     )
 ):
 
-    query = {}
+    role = current_user.get("role")
 
-    # Search logic
-    if search:
+    # TRANSPORTER
+    if role == "TRANSPORTER":
 
-        query["$or"] = [
+        inventory = db.query(Inventory).filter(
 
-            {
-                "farmer_name": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
+            Inventory.status ==
+            "DISPATCHED"
 
-            {
-                "product_name": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            },
+        ).all()
 
-            {
-                "batch_id": {
-                    "$regex": search,
-                    "$options": "i"
-                }
-            }
-        ]
+        return inventory
 
-    # Status filter
-    if status:
+    # ADMIN / MANAGER / OPERATOR
+    inventory = db.query(Inventory).all()
 
-        query["status"] = status
-
-    # Category filter
-    if category:
-
-        query["category"] = category
-
-    skip = (page - 1) * limit
-
-    inventory = list(
-
-        inventory_collection.find(
-            query,
-            {
-                "_id": 0
-            }
-        )
-
-        .skip(skip)
-
-        .limit(limit)
-    )
-
-    total = inventory_collection.count_documents(
-        query
-    )
-
-    return {
-
-        "inventory": inventory,
-
-        "total": total,
-
-        "page": page,
-
-        "limit": limit
-    }
+    return inventory
 
 
 # GET SINGLE INVENTORY
-@router.get("/{batch_id}")
+@router.get("/{inventory_id}")
 def get_single_inventory(
 
-    batch_id: str,
+    inventory_id: int,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
             "SUPER_ADMIN",
             "FPO_MANAGER",
-            "CAAS_OPERATOR"
+            "CAAS_OPERATOR",
+            "TRANSPORTER"
         ])
     )
 ):
 
-    batch = inventory_collection.find_one(
-        {
-            "batch_id": batch_id
-        },
-        {
-            "_id": 0
-        }
-    )
+    inventory = db.query(Inventory).filter(
 
-    if not batch:
+        Inventory.id == inventory_id
+
+    ).first()
+
+    if not inventory:
 
         raise HTTPException(
             status_code=404,
-            detail="Batch not found"
+            detail="Inventory not found"
         )
 
-    return batch
+    return inventory
 
 
 # UPDATE INVENTORY
-@router.put("/update/{batch_id}")
+@router.put("/update/{inventory_id}")
 def update_inventory(
 
-    batch_id: str,
+    inventory_id: int,
 
-    inventory: InventoryCreate,
+    inventory_data: dict,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
@@ -289,54 +223,49 @@ def update_inventory(
     )
 ):
 
-    existing_batch = inventory_collection.find_one({
-        "batch_id": batch_id
-    })
+    inventory = db.query(Inventory).filter(
 
-    if not existing_batch:
+        Inventory.id == inventory_id
+
+    ).first()
+
+    if not inventory:
 
         raise HTTPException(
             status_code=404,
-            detail="Batch not found"
+            detail="Inventory not found"
         )
 
-    updated_data = {
+    inventory.quantity = inventory_data[
+        "quantity"
+    ]
 
-        "$set": {
+    inventory.current_temperature = inventory_data[
+        "current_temperature"
+    ]
 
-            "farmer_name": inventory.farmer_name,
+    inventory.humidity = inventory_data[
+        "humidity"
+    ]
 
-            "phone_number": inventory.phone_number,
+    inventory.storage_days = inventory_data[
+        "storage_days"
+    ]
 
-            "product_name": inventory.product_name,
-
-            "category": inventory.category,
-
-            "quantity": inventory.quantity,
-
-            "storage_temp": inventory.storage_temp,
-
-            "entry_date": inventory.entry_date
-        }
-    }
-
-    inventory_collection.update_one(
-        {
-            "batch_id": batch_id
-        },
-        updated_data
-    )
+    db.commit()
 
     return {
-        "message": "Inventory updated successfully"
+        "message": "Inventory Updated Successfully"
     }
 
 
 # DISPATCH INVENTORY
-@router.put("/dispatch/{batch_id}")
+@router.put("/dispatch/{inventory_id}")
 def dispatch_inventory(
 
-    batch_id: str,
+    inventory_id: int,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
@@ -346,43 +275,37 @@ def dispatch_inventory(
     )
 ):
 
-    batch = inventory_collection.find_one({
-        "batch_id": batch_id
-    })
+    inventory = db.query(Inventory).filter(
 
-    if not batch:
+        Inventory.id == inventory_id
+
+    ).first()
+
+    if not inventory:
 
         raise HTTPException(
             status_code=404,
-            detail="Batch not found"
+            detail="Inventory not found"
         )
 
-    inventory_collection.update_one(
+    inventory.status = "DISPATCHED"
 
-        {
-            "batch_id": batch_id
-        },
+    inventory.dispatched_at = datetime.utcnow()
 
-        {
-            "$set": {
-
-                "status": "DISPATCHED",
-
-                "dispatched_at": datetime.utcnow()
-            }
-        }
-    )
+    db.commit()
 
     return {
-        "message": "Inventory dispatched successfully"
+        "message": "Inventory Dispatched Successfully"
     }
 
 
 # DELETE INVENTORY
-@router.delete("/delete/{batch_id}")
+@router.delete("/delete/{inventory_id}")
 def delete_inventory(
 
-    batch_id: str,
+    inventory_id: int,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
@@ -391,21 +314,23 @@ def delete_inventory(
     )
 ):
 
-    batch = inventory_collection.find_one({
-        "batch_id": batch_id
-    })
+    inventory = db.query(Inventory).filter(
 
-    if not batch:
+        Inventory.id == inventory_id
+
+    ).first()
+
+    if not inventory:
 
         raise HTTPException(
             status_code=404,
-            detail="Batch not found"
+            detail="Inventory not found"
         )
 
-    inventory_collection.delete_one({
-        "batch_id": batch_id
-    })
+    db.delete(inventory)
+
+    db.commit()
 
     return {
-        "message": "Inventory deleted successfully"
+        "message": "Inventory Deleted Successfully"
     }

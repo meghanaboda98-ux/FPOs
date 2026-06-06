@@ -1,131 +1,149 @@
 import { useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import { registerUser } from "../services/authService";
 
-import toast from "react-hot-toast";
-
 function Register() {
-  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "",
-  });
+    const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const [formData, setFormData] = useState({
+
+        name: "",
+        email: "",
+        password: "",
+        role: "FPO_MANAGER"
+
     });
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleChange = (e) => {
 
-    try {
-      await registerUser(formData);
+        setFormData({
 
-      toast.success("User registered successfully");
+            ...formData,
+            [e.target.name]: e.target.value
 
-      navigate("/login");
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Registration failed");
-    }
-  };
+        });
+    };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white w-full max-w-md rounded-2xl border border-gray-200 shadow-sm p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            Create Account
-          </h1>
+    const handleSubmit = async (e) => {
 
-          <p className="text-gray-500 mt-1">
-            Register operator or manager account
-          </p>
+        e.preventDefault();
+
+        try {
+
+            await registerUser(formData);
+
+            alert("Registration Successful");
+
+            navigate("/login");
+
+        } catch (error) {
+
+            console.log(error);
+
+            alert(
+                error?.response?.data?.detail ||
+                "Registration Failed"
+            );
+        }
+    };
+
+    return (
+
+        <div className="min-h-screen flex justify-center items-center bg-gray-100">
+
+            <form
+                onSubmit={handleSubmit}
+                className="bg-white p-8 rounded shadow-md w-96"
+            >
+
+                <h2 className="text-2xl font-bold mb-6 text-center">
+
+                    Register
+
+                </h2>
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="Name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                    required
+                />
+
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                    required
+                />
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                    required
+                />
+
+                <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                >
+
+                    <option value="SUPER_ADMIN">
+                        SUPER_ADMIN
+                    </option>
+
+                    <option value="FPO_MANAGER">
+                        FPO_MANAGER
+                    </option>
+
+                    <option value="CAAS_OPERATOR">
+                        CAAS_OPERATOR
+                    </option>
+
+                    <option value="TRANSPORTER">
+                        TRANSPORTER
+                    </option>
+
+                </select>
+
+                <button
+                    type="submit"
+                    className="w-full bg-green-600 text-white p-3 rounded"
+                >
+
+                    Register
+
+                </button>
+
+                <p className="text-center mt-4">
+
+                    Already Registered?
+
+                    <span
+                        className="text-blue-600 cursor-pointer ml-2 font-semibold"
+                        onClick={() => navigate("/login")}
+                    >
+                        Login Here
+                    </span>
+
+                </p>
+
+            </form>
+
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Name</label>
-
-            <input
-              type="text"
-              name="name"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Email</label>
-
-            <input
-              type="email"
-              name="email"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Password</label>
-
-            <input
-              type="password"
-              name="password"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Role</label>
-
-            <select
-              name="role"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            >
-              <option value="">Select Role</option>
-
-              <option value="FPO_MANAGER">FPO Manager</option>
-
-              <option value="CAAS_OPERATOR">CAAS Operator</option>
-            </select>
-          </div>
-
-          <div className="space-y-4">
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-all"
-            >
-              Register
-            </button>
-
-            <div className="text-center text-sm text-gray-500">
-              Already have an account?
-              <span
-                onClick={() => navigate("/login")}
-                className="text-blue-600 cursor-pointer ml-1 hover:underline"
-              >
-                Login
-              </span>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+    );
 }
 
 export default Register;

@@ -2,149 +2,166 @@ from apscheduler.schedulers.background import (
     BackgroundScheduler
 )
 
-from database import db
+from sqlalchemy.orm import Session
+
+from datetime import datetime
+
+from database import SessionLocal
+
+from models.inventory_model import Inventory
+
+from models.product_model import Product
+
+from models.alert_model import Alert
 
 from calculations.shelf_life import (
     calculate_quality,
     estimate_remaining_days
 )
 
-from datetime import datetime
-
-inventory_collection = db["inventory_batches"]
-products_collection = db["product_master"]
-alerts_collection = db["alerts"]
-
 
 def update_inventory_quality():
 
     print("Running inventory scheduler...")
 
-    # Get active inventory
-    inventory_batches = list(
-        inventory_collection.find({
-            "status": {
-                "$ne": "DISPATCHED"
-            }
-        })
-    )
+    db: Session = SessionLocal()
 
-    for batch in inventory_batches:
+    try:
 
-        # Find product data
-        product = products_collection.find_one({
-            "product_name": batch["product_name"]
-        })
+        inventory_batches = db.query(
+            Inventory
+        ).filter(
+            Inventory.status != "DISPATCHED"
+        ).all()
 
-        if not product:
-            continue
+        for batch in inventory_batches:
 
-        # Calculate days stored
-        entry_date = batch["entry_date"]
+            product = db.query(Product).filter(
+                Product.product_name == batch.product_name
+            ).first()
 
-        days_stored = (
-            datetime.utcnow() - entry_date
-        ).days
+            if not product:
+                continue
 
-        # Recalculate quality
-        quality = calculate_quality(
+            days_stored = (
 
-            model=product["model"],
+                datetime.utcnow()
 
-            k_ref=product["k_ref"],
+                -
 
-            Ea=product["Ea"],
+                batch.entry_date
 
-            storage_temp=batch["storage_temp"],
+            ).days
 
-            days_stored=days_stored
-        )
+            quality = calculate_quality(
 
-        # Estimate remaining days
-        remaining_days = estimate_remaining_days(
-            quality,
-            product["quality_limit"]
-        )
+                model=product.model,
 
-        # Determine status
-        status = "ACTIVE"
+                k_ref=product.k_ref,
 
-        if remaining_days <= 2:
-            status = "CRITICAL"
+                Ea=product.Ea,
 
-        elif remaining_days <= 5:
-            status = "WARNING"
+                storage_temp=batch.storage_temp,
 
-        # Expired
-        if quality <= product["quality_limit"]:
-            status = "EXPIRED"
+                days_stored=days_stored
+            )
+
+            remaining_days = estimate_remaining_days(
+
+                quality,
+
+                product.quality_limit
+            )
+
+            status = "ACTIVE"
+
+            if remaining_days <= 2:
+
+                status = "CRITICAL"
+
+            elif remaining_days <= 5:
+
+                status = "WARNING"
+
+            if quality <= product.quality_limit:
+
+                status = "EXPIRED"
+
+            if status in [
+
+                "WARNING",
+                "CRITICAL",
+                "EXPIRED"
+
+            ]:
+
+                existing_alert = db.query(Alert).filter(
+
+                    Alert.batch_id == batch.batch_id,
+
+                    Alert.status == status
+
+                ).first()
+
+                if not existing_alert:
+
+                    alert = Alert(
+
+                        batch_id=batch.batch_id,
+
+                        warehouse_name=batch.warehouse_name,
+
+                        product_name=batch.product_name,
+
+                        farmer_name=batch.farmer_name,
+
+                        status=status,
+
+                        remaining_days=remaining_days,
+
+                        created_at=datetime.utcnow()
+                    )
+
+                    db.add(alert)
+
+                    print(
+                        f"Alert created for Batch: {batch.batch_id}"
+                    )
+
+            batch.quality = quality
+
+            batch.remaining_days = remaining_days
+
+            batch.status = status
+
+            batch.last_updated = datetime.utcnow()
+
+            print(
+                f"Updated Batch: {batch.batch_id}"
+            )
+
+        db.commit()
+
+    except Exception as e:
+
+        db.rollback()
+
+        print("Scheduler Error:", e)
+
+    finally:
+
+        db.close()
 
 
-        # Create alerts
-        if status in ["WARNING", "CRITICAL", "EXPIRED"]:
-        
-            existing_alert = alerts_collection.find_one({
-                "batch_id": batch["batch_id"],
-                "status": status
-            })
-        
-            if not existing_alert:
-        
-                alert_data = {
-        
-                    "batch_id": batch["batch_id"],
-        
-                    "product_name": batch["product_name"],
-        
-                    "farmer_name": batch["farmer_name"],
-        
-                    "status": status,
-        
-                    "remaining_days": remaining_days,
-        
-                    "created_at": datetime.utcnow()
-                }
-        
-                alerts_collection.insert_one(
-                    alert_data
-                )
-        
-                print(
-                    f"Alert created for Batch: {batch['batch_id']}"
-                )
-        
-
-        
-
-        # Update inventory batch
-        inventory_collection.update_one(
-            {
-                "batch_id": batch["batch_id"]
-            },
-            {
-                "$set": {
-                    "quality": quality,
-                    "remaining_days": remaining_days,
-                    "status": status,
-                    "last_updated": datetime.utcnow()
-                }
-            }
-        )
-
-        print(
-            f"Updated Batch: {batch['batch_id']}"
-        )
-
-
-# Create scheduler
 scheduler = BackgroundScheduler()
 
-# Run every 1 hour
 scheduler.add_job(
+
     update_inventory_quality,
+
     "interval",
+
     hours=1
 )
 
-# Start scheduler
 scheduler.start()

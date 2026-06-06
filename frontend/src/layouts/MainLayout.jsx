@@ -1,23 +1,38 @@
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import { Outlet } from "react-router-dom";
 
-function MainLayout({ children }) {
+import Navbar from "./Navbar";
+import Sidebar from "./Sidebar";
+import Footer from "./Footer";
+
+function MainLayout() {
 
   return (
 
-    <div className="flex bg-gray-100 min-h-screen">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+
+      {/* SIDEBAR */}
 
       <Sidebar />
 
-      <div className="ml-64 flex-1">
+      {/* MAIN SECTION */}
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* NAVBAR */}
 
         <Navbar />
 
-        <div className="p-6">
+        {/* PAGE CONTENT */}
 
-          {children}
+        <main className="flex-1 overflow-y-auto p-6">
 
-        </div>
+          <Outlet />
+
+        </main>
+
+        {/* FOOTER */}
+
+        <Footer />
 
       </div>
 

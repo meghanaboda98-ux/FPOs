@@ -1,38 +1,34 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException
-)
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from database import db
-
+from database import get_db
+from models.product_model import Product
+from schemas.product_schema import ProductCreateSchema, ProductUpdateSchema
 from auth import require_role
 
-from models.product_model import (
-    ProductCreate
-)
 
 router = APIRouter()
 
-products_collection = db["product_master"]
 
-# ADD PRODUCT
 @router.post("/add")
-
 def add_product(
 
-    product: ProductCreate,
+    product_data: ProductCreateSchema,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
-            "SUPER_ADMIN"
+            "SUPER_ADMIN",
+            "FPO_MANAGER",
+            "CAAS_OPERATOR"
         ])
     )
 ):
 
-    existing_product = products_collection.find_one({
-        "product_name": product.product_name
-    })
+    existing_product = db.query(Product).filter(
+        Product.name == product_data.name
+    ).first()
 
     if existing_product:
         raise HTTPException(
@@ -40,56 +36,87 @@ def add_product(
             detail="Product already exists"
         )
 
-    product_data = {
+    product = Product(
 
-        "product_name": product.product_name,
+        name=product_data.name,
 
-        "category": product.category,
+        category=product_data.category,
 
-        "optimal_temp": product.optimal_temp,
+        optimal_temperature=product_data.optimal_temperature,
 
-        "model": product.model,
+        humidity=product_data.humidity,
 
-        "k_ref": product.k_ref,
+        shelf_life=product_data.shelf_life,
 
-        "Ea": product.Ea,
+        respiration_rate=product_data.respiration_rate,
 
-        "quality_limit": product.quality_limit
-    }
+        storage_type=product_data.storage_type,
 
-    products_collection.insert_one(
-        product_data
+        min_temperature=product_data.min_temperature,
+
+        max_temperature=product_data.max_temperature,
+
+        quality_threshold=product_data.quality_threshold,
+
+        model=product_data.model,
+
+        k_ref=product_data.k_ref,
+
+        Ea=product_data.Ea
     )
 
+    db.add(product)
+
+    db.commit()
+
+    db.refresh(product)
+
     return {
-        "message": "Product added successfully"
+        "message": "Product Added Successfully",
+        "product": product
     }
 
-# GET ALL PRODUCTS
+
 @router.get("/all")
+def get_products(
 
-def get_all_products():
+    db: Session = Depends(get_db),
 
-    products = list(
-        products_collection.find(
-            {},
-            {"_id": 0}
-        )
+    current_user: dict = Depends(
+        require_role([
+            "SUPER_ADMIN",
+            "FPO_MANAGER",
+            "CAAS_OPERATOR",
+            "TRANSPORTER"
+        ])
     )
+):
 
-    return {
-        "products": products
-    }
+    products = db.query(Product).all()
 
-# GET SINGLE PRODUCT
-@router.get("/{product_name}")
+    return products
 
-def get_product(product_name: str):
 
-    product = products_collection.find_one(
-        {"product_name": product_name},
-        {"_id": 0}
+@router.get("/details/{product_name}")
+def get_product_details(
+
+    product_name: str,
+
+    db: Session = Depends(get_db),
+
+    current_user: dict = Depends(
+        require_role([
+            "SUPER_ADMIN",
+            "FPO_MANAGER",
+            "CAAS_OPERATOR",
+            "TRANSPORTER"
+        ])
     )
+):
+
+    product = db.query(Product).filter(
+        Product.name == product_name
+    ).first()
 
     if not product:
         raise HTTPException(
@@ -99,24 +126,57 @@ def get_product(product_name: str):
 
     return product
 
-# UPDATE PRODUCT
-@router.put("/update/{product_name}")
 
+@router.get("/{product_id}")
+def get_single_product(
+
+    product_id: int,
+
+    db: Session = Depends(get_db),
+
+    current_user: dict = Depends(
+        require_role([
+            "SUPER_ADMIN",
+            "FPO_MANAGER",
+            "CAAS_OPERATOR",
+            "TRANSPORTER"
+        ])
+    )
+):
+
+    product = db.query(Product).filter(
+        Product.id == product_id
+    ).first()
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    return product
+
+
+@router.put("/update/{product_id}")
 def update_product(
 
-    product_name: str,
-    updated_product: ProductCreate,
+    product_id: int,
+
+    product_data: ProductUpdateSchema,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
-            "SUPER_ADMIN"
+            "SUPER_ADMIN",
+            "FPO_MANAGER"
         ])
     )
 ):
 
-    product = products_collection.find_one({
-        "product_name": product_name
-    })
+    product = db.query(Product).filter(
+        Product.id == product_id
+    ).first()
 
     if not product:
         raise HTTPException(
@@ -124,23 +184,48 @@ def update_product(
             detail="Product not found"
         )
 
-    products_collection.update_one(
-        {"product_name": product_name},
-        {
-            "$set": updated_product.dict()
-        }
-    )
+    product.name = product_data.name
+
+    product.category = product_data.category
+
+    product.optimal_temperature = product_data.optimal_temperature
+
+    product.humidity = product_data.humidity
+
+    product.shelf_life = product_data.shelf_life
+
+    product.respiration_rate = product_data.respiration_rate
+
+    product.storage_type = product_data.storage_type
+
+    product.min_temperature = product_data.min_temperature
+
+    product.max_temperature = product_data.max_temperature
+
+    product.quality_threshold = product_data.quality_threshold
+
+    product.model = product_data.model
+
+    product.k_ref = product_data.k_ref
+
+    product.Ea = product_data.Ea
+
+    db.commit()
+
+    db.refresh(product)
 
     return {
-        "message": "Product updated successfully"
+        "message": "Product Updated Successfully",
+        "product": product
     }
 
-# DELETE PRODUCT
-@router.delete("/delete/{product_name}")
 
+@router.delete("/delete/{product_id}")
 def delete_product(
 
-    product_name: str,
+    product_id: int,
+
+    db: Session = Depends(get_db),
 
     current_user: dict = Depends(
         require_role([
@@ -149,9 +234,9 @@ def delete_product(
     )
 ):
 
-    product = products_collection.find_one({
-        "product_name": product_name
-    })
+    product = db.query(Product).filter(
+        Product.id == product_id
+    ).first()
 
     if not product:
         raise HTTPException(
@@ -159,10 +244,10 @@ def delete_product(
             detail="Product not found"
         )
 
-    products_collection.delete_one({
-        "product_name": product_name
-    })
+    db.delete(product)
+
+    db.commit()
 
     return {
-        "message": "Product deleted successfully"
+        "message": "Product Deleted Successfully"
     }

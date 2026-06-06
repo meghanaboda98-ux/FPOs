@@ -1,25 +1,42 @@
 import math
 
-# Gas constant
+# Universal Gas Constant
 R = 8.314
 
-# Reference temperature
-# 20°C = 293.15K
-T_REF = 293.15
 
 def calculate_decay_constant(
     k_ref,
     Ea,
-    storage_temp
+    temperature
 ):
 
     # Convert Celsius to Kelvin
-    T = storage_temp + 273.15
+    temp_kelvin = temperature + 273.15
 
+    # Reference temperature (25°C)
+    ref_kelvin = 25 + 273.15
+
+    # Arrhenius Equation
     k = k_ref * math.exp(
-        -(Ea / R) * (
-            (1 / T) - (1 / T_REF)
+
+        (-Ea / R) *
+        (
+            (1 / temp_kelvin) -
+            (1 / ref_kelvin)
         )
     )
 
-    return k
+    return round(k, 6)
+
+
+def arrhenius_rate(
+    k_ref,
+    Ea,
+    temperature
+):
+
+    return calculate_decay_constant(
+        k_ref,
+        Ea,
+        temperature
+    )

@@ -1,20 +1,48 @@
-from pydantic import BaseModel
-
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
 from datetime import datetime
+from database import Base
 
 
-class InventoryCreate(BaseModel):
+class Inventory(Base):
 
-    farmer_name: str
+    __tablename__ = "inventory"
 
-    phone_number: str
+    id = Column(Integer, primary_key=True)
 
-    product_name: str
+    farmer_name = Column(String)
 
-    category: str
+    phone_number = Column(String)
 
-    quantity: str
+    product_name = Column(String)
 
-    storage_temp: float
+    category = Column(String)
 
-    entry_date: datetime
+    quantity = Column(Float)
+
+    warehouse_name = Column(String)
+
+    coldroom_name = Column(String)
+
+    current_temperature = Column(Float)
+
+    humidity = Column(Float)
+
+    quality = Column(Float)
+
+    spoilage = Column(Float)
+
+    storage_days = Column(Integer)
+
+    shelf_life_remaining = Column(Integer)
+
+    dispatch_priority = Column(String)
+
+    temperature_status = Column(String)
+
+    chilling_injury = Column(Boolean)
+
+    status = Column(String)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    dispatched_at = Column(DateTime, nullable=True)

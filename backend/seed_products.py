@@ -1,244 +1,362 @@
-from database import db
-
-products_collection = db["product_master"]
+from database import SessionLocal
+from models.product_model import Product
 
 products = [
 
     {
-        "product_name": "Tomato",
+        "name": "Tomato",
         "category": "Vegetable",
-        "optimal_temp": 10,
-        "model": "first",
-        "k_ref": 0.02,
-        "Ea": 45000,
-        "quality_limit": 0.3
+        "optimal_temperature": 10,
+        "humidity": 90,
+        "shelf_life": 14,
+        "respiration_rate": 28,
+        "storage_type": "Cold Storage",
+        "min_temperature": 8,
+        "max_temperature": 12,
+        "quality_threshold": 70
     },
 
     {
-        "product_name": "Chilli",
+        "name": "Chilli",
         "category": "Vegetable",
-        "optimal_temp": 8,
-        "model": "first",
-        "k_ref": 0.018,
-        "Ea": 44000,
-        "quality_limit": 0.3
+        "optimal_temperature": 8,
+        "humidity": 85,
+        "shelf_life": 12,
+        "respiration_rate": 24,
+        "storage_type": "Cold Storage",
+        "min_temperature": 7,
+        "max_temperature": 10,
+        "quality_threshold": 72
     },
 
     {
-        "product_name": "Carrot",
+        "name": "Carrot",
         "category": "Vegetable",
-        "optimal_temp": 0,
-        "model": "first",
-        "k_ref": 0.005,
-        "Ea": 42000,
-        "quality_limit": 0.25
+        "optimal_temperature": 0,
+        "humidity": 95,
+        "shelf_life": 60,
+        "respiration_rate": 12,
+        "storage_type": "Cold Storage",
+        "min_temperature": 0,
+        "max_temperature": 2,
+        "quality_threshold": 85
     },
 
     {
-        "product_name": "Beetroot",
+        "name": "Beetroot",
         "category": "Vegetable",
-        "optimal_temp": 0,
-        "model": "first",
-        "k_ref": 0.006,
-        "Ea": 42000,
-        "quality_limit": 0.25
+        "optimal_temperature": 0,
+        "humidity": 95,
+        "shelf_life": 50,
+        "respiration_rate": 10,
+        "storage_type": "Cold Storage",
+        "min_temperature": 0,
+        "max_temperature": 2,
+        "quality_threshold": 85
     },
 
     {
-        "product_name": "Cucumber",
+        "name": "Cucumber",
         "category": "Vegetable",
-        "optimal_temp": 10,
-        "model": "first",
-        "k_ref": 0.025,
-        "Ea": 46000,
-        "quality_limit": 0.35
+        "optimal_temperature": 10,
+        "humidity": 95,
+        "shelf_life": 10,
+        "respiration_rate": 30,
+        "storage_type": "Cold Storage",
+        "min_temperature": 8,
+        "max_temperature": 12,
+        "quality_threshold": 68
     },
 
     {
-        "product_name": "Corn",
+        "name": "Corn",
         "category": "Vegetable",
-        "optimal_temp": 0,
-        "model": "first",
-        "k_ref": 0.03,
-        "Ea": 47000,
-        "quality_limit": 0.35
+        "optimal_temperature": 0,
+        "humidity": 90,
+        "shelf_life": 8,
+        "respiration_rate": 35,
+        "storage_type": "Cold Storage",
+        "min_temperature": 0,
+        "max_temperature": 2,
+        "quality_threshold": 65
     },
 
     {
-        "product_name": "Cabbage",
+        "name": "Cabbage",
         "category": "Vegetable",
-        "optimal_temp": 1,
-        "model": "first",
-        "k_ref": 0.007,
-        "Ea": 41000,
-        "quality_limit": 0.25
+        "optimal_temperature": 1,
+        "humidity": 98,
+        "shelf_life": 90,
+        "respiration_rate": 8,
+        "storage_type": "Cold Storage",
+        "min_temperature": 0,
+        "max_temperature": 2,
+        "quality_threshold": 90
     },
 
     {
-        "product_name": "Spinach",
+        "name": "Spinach",
         "category": "Vegetable",
-        "optimal_temp": 2,
-        "model": "first",
-        "k_ref": 0.04,
-        "Ea": 48000,
-        "quality_limit": 0.4
+        "optimal_temperature": 2,
+        "humidity": 95,
+        "shelf_life": 7,
+        "respiration_rate": 45,
+        "storage_type": "Cold Storage",
+        "min_temperature": 0,
+        "max_temperature": 3,
+        "quality_threshold": 60
     },
 
     {
-        "product_name": "Banana",
+        "name": "Banana",
         "category": "Fruit",
-        "optimal_temp": 13,
-        "model": "first",
-        "k_ref": 0.03,
-        "Ea": 50000,
-        "quality_limit": 0.4
+        "optimal_temperature": 13,
+        "humidity": 90,
+        "shelf_life": 14,
+        "respiration_rate": 40,
+        "storage_type": "Cold Storage",
+        "min_temperature": 12,
+        "max_temperature": 14,
+        "quality_threshold": 70
     },
 
     {
-        "product_name": "Mango",
+        "name": "Mango",
         "category": "Fruit",
-        "optimal_temp": 12,
-        "model": "first",
-        "k_ref": 0.028,
-        "Ea": 49000,
-        "quality_limit": 0.35
+        "optimal_temperature": 12,
+        "humidity": 90,
+        "shelf_life": 21,
+        "respiration_rate": 35,
+        "storage_type": "Cold Storage",
+        "min_temperature": 10,
+        "max_temperature": 13,
+        "quality_threshold": 75
     },
 
     {
-        "product_name": "Lemon",
+        "name": "Lemon",
         "category": "Fruit",
-        "optimal_temp": 5,
-        "model": "first",
-        "k_ref": 0.01,
-        "Ea": 43000,
-        "quality_limit": 0.2
+        "optimal_temperature": 5,
+        "humidity": 85,
+        "shelf_life": 60,
+        "respiration_rate": 6,
+        "storage_type": "Cold Storage",
+        "min_temperature": 4,
+        "max_temperature": 7,
+        "quality_threshold": 88
     },
 
     {
-        "product_name": "Pomegranate",
+        "name": "Pomegranate",
         "category": "Fruit",
-        "optimal_temp": 5,
-        "model": "first",
-        "k_ref": 0.009,
-        "Ea": 43000,
-        "quality_limit": 0.2
+        "optimal_temperature": 5,
+        "humidity": 90,
+        "shelf_life": 90,
+        "respiration_rate": 5,
+        "storage_type": "Cold Storage",
+        "min_temperature": 4,
+        "max_temperature": 6,
+        "quality_threshold": 90
     },
 
     {
-        "product_name": "Grapes",
+        "name": "Grapes",
         "category": "Fruit",
-        "optimal_temp": 0,
-        "model": "first",
-        "k_ref": 0.006,
-        "Ea": 42000,
-        "quality_limit": 0.2
+        "optimal_temperature": 0,
+        "humidity": 95,
+        "shelf_life": 60,
+        "respiration_rate": 4,
+        "storage_type": "Cold Storage",
+        "min_temperature": -1,
+        "max_temperature": 1,
+        "quality_threshold": 92
     },
 
     {
-        "product_name": "Kiwi",
+        "name": "Kiwi",
         "category": "Fruit",
-        "optimal_temp": 0,
-        "model": "first",
-        "k_ref": 0.005,
-        "Ea": 42000,
-        "quality_limit": 0.2
+        "optimal_temperature": 0,
+        "humidity": 90,
+        "shelf_life": 120,
+        "respiration_rate": 5,
+        "storage_type": "Controlled Atmosphere",
+        "min_temperature": -1,
+        "max_temperature": 1,
+        "quality_threshold": 94
     },
 
     {
-        "product_name": "Milk",
+        "name": "Milk",
         "category": "Dairy",
-        "optimal_temp": 4,
-        "model": "zero",
-        "k_ref": 0.12,
-        "Ea": 35000,
-        "quality_limit": 0.1
+        "optimal_temperature": 4,
+        "humidity": 80,
+        "shelf_life": 7,
+        "respiration_rate": 0,
+        "storage_type": "Refrigerated",
+        "min_temperature": 2,
+        "max_temperature": 5,
+        "quality_threshold": 95
     },
 
     {
-        "product_name": "Paneer",
+        "name": "Paneer",
         "category": "Dairy",
-        "optimal_temp": 4,
-        "model": "zero",
-        "k_ref": 0.1,
-        "Ea": 35000,
-        "quality_limit": 0.1
+        "optimal_temperature": 4,
+        "humidity": 80,
+        "shelf_life": 10,
+        "respiration_rate": 0,
+        "storage_type": "Refrigerated",
+        "min_temperature": 2,
+        "max_temperature": 5,
+        "quality_threshold": 90
     },
 
     {
-        "product_name": "Cheese",
+        "name": "Cheese",
         "category": "Dairy",
-        "optimal_temp": 4,
-        "model": "zero",
-        "k_ref": 0.02,
-        "Ea": 34000,
-        "quality_limit": 0.05
+        "optimal_temperature": 4,
+        "humidity": 75,
+        "shelf_life": 180,
+        "respiration_rate": 0,
+        "storage_type": "Refrigerated",
+        "min_temperature": 2,
+        "max_temperature": 6,
+        "quality_threshold": 96
     },
 
     {
-        "product_name": "Butter",
+        "name": "Butter",
         "category": "Dairy",
-        "optimal_temp": 4,
-        "model": "zero",
-        "k_ref": 0.01,
-        "Ea": 33000,
-        "quality_limit": 0.05
+        "optimal_temperature": 4,
+        "humidity": 75,
+        "shelf_life": 120,
+        "respiration_rate": 0,
+        "storage_type": "Refrigerated",
+        "min_temperature": 2,
+        "max_temperature": 6,
+        "quality_threshold": 96
     },
 
     {
-        "product_name": "Chicken",
+        "name": "Chicken",
         "category": "Meat",
-        "optimal_temp": -2,
-        "model": "second",
-        "k_ref": 0.04,
-        "Ea": 52000,
-        "quality_limit": 0.4
+        "optimal_temperature": -2,
+        "humidity": 85,
+        "shelf_life": 10,
+        "respiration_rate": 0,
+        "storage_type": "Frozen Storage",
+        "min_temperature": -4,
+        "max_temperature": 0,
+        "quality_threshold": 85
     },
 
     {
-        "product_name": "Mutton",
+        "name": "Mutton",
         "category": "Meat",
-        "optimal_temp": -2,
-        "model": "second",
-        "k_ref": 0.035,
-        "Ea": 52000,
-        "quality_limit": 0.4
+        "optimal_temperature": -2,
+        "humidity": 85,
+        "shelf_life": 12,
+        "respiration_rate": 0,
+        "storage_type": "Frozen Storage",
+        "min_temperature": -4,
+        "max_temperature": 0,
+        "quality_threshold": 85
     },
 
     {
-        "product_name": "Fish",
+        "name": "Fish",
         "category": "Meat",
-        "optimal_temp": -2,
-        "model": "second",
-        "k_ref": 0.05,
-        "Ea": 53000,
-        "quality_limit": 0.45
+        "optimal_temperature": -2,
+        "humidity": 90,
+        "shelf_life": 7,
+        "respiration_rate": 0,
+        "storage_type": "Frozen Storage",
+        "min_temperature": -5,
+        "max_temperature": -1,
+        "quality_threshold": 82
     },
 
     {
-        "product_name": "Beef",
+        "name": "Beef",
         "category": "Meat",
-        "optimal_temp": -2,
-        "model": "second",
-        "k_ref": 0.03,
-        "Ea": 52000,
-        "quality_limit": 0.35
+        "optimal_temperature": -2,
+        "humidity": 85,
+        "shelf_life": 15,
+        "respiration_rate": 0,
+        "storage_type": "Frozen Storage",
+        "min_temperature": -4,
+        "max_temperature": 0,
+        "quality_threshold": 88
     },
 
     {
-        "product_name": "Pork",
+        "name": "Pork",
         "category": "Meat",
-        "optimal_temp": -2,
-        "model": "second",
-        "k_ref": 0.03,
-        "Ea": 52000,
-        "quality_limit": 0.35
+        "optimal_temperature": -2,
+        "humidity": 85,
+        "shelf_life": 14,
+        "respiration_rate": 0,
+        "storage_type": "Frozen Storage",
+        "min_temperature": -4,
+        "max_temperature": 0,
+        "quality_threshold": 88
     }
+
 ]
+db = SessionLocal()
 
-# Clear old product master
-products_collection.delete_many({})
+for item in products:
 
-# Insert products
-products_collection.insert_many(products)
+    existing = db.query(Product).filter(
+        Product.name == item["name"]
+    ).first()
 
-print("Product master seeded successfully")
+    if existing:
+        continue
+
+    product = Product(
+        name=item["name"],
+        category=item["category"],
+        optimal_temperature=item["optimal_temperature"],
+        humidity=item["humidity"],
+        shelf_life=item["shelf_life"],
+        respiration_rate=item["respiration_rate"],
+        storage_type=item["storage_type"],
+        min_temperature=item["min_temperature"],
+        max_temperature=item["max_temperature"],
+        quality_threshold=item["quality_threshold"],
+        model="first",
+
+        k_ref={
+            "Tomato": 0.008,
+            "Banana": 0.010,
+            "Mango": 0.009,
+            "Grapes": 0.004,
+            "Lemon": 0.003,
+            "Milk": 0.015,
+            "Paneer": 0.018,
+            "Cheese": 0.002,
+            "Chicken": 0.020,
+            "Fish": 0.025
+        }.get(item["name"], 0.005),
+
+        Ea={
+            "Tomato": 50000,
+            "Banana": 52000,
+            "Mango": 51000,
+            "Grapes": 47000,
+            "Lemon": 45000,
+            "Milk": 55000,
+            "Paneer": 58000,
+            "Cheese": 42000,
+            "Chicken": 60000,
+            "Fish": 65000
+        }.get(item["name"], 45000)
+    )
+
+    db.add(product)
+
+db.commit()
+db.close()
+
+print("Products seeded successfully")

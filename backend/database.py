@@ -1,12 +1,36 @@
-from pymongo import MongoClient
-from dotenv import load_dotenv
-import os
+from sqlalchemy import create_engine
 
-load_dotenv()
+from sqlalchemy.ext.declarative import declarative_base
 
-MONGO_URI = os.getenv("MONGO_URI")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
+from sqlalchemy.orm import sessionmaker
 
-client = MongoClient(MONGO_URI)
 
-db = client[DATABASE_NAME]
+DATABASE_URL = "postgresql://postgres:Meghana%40123@localhost:5432/fpo_db"
+
+
+engine = create_engine(
+    DATABASE_URL
+)
+
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+
+Base = declarative_base()
+
+
+def get_db():
+
+    db = SessionLocal()
+
+    try:
+
+        yield db
+
+    finally:
+
+        db.close()

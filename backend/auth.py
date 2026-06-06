@@ -1,64 +1,93 @@
-from passlib.context import CryptContext
-from jose import jwt, JWTError
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer
-import os
 
-load_dotenv()
+from jose import (
+    jwt,
+    JWTError
+)
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM")
+from passlib.context import CryptContext
+
+from fastapi import (
+    Depends,
+    HTTPException,
+    status
+)
+
+from fastapi.security import (
+    HTTPBearer,
+    HTTPAuthorizationCredentials
+)
+
+SECRET_KEY = "SECRET123"
+
+ALGORITHM = "HS256"
+
+ACCESS_TOKEN_EXPIRE_HOURS = 24
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
 
-# Bearer token
 security = HTTPBearer()
 
-# Hash password
+
+# HASH PASSWORD
 def hash_password(password: str):
+
     return pwd_context.hash(password)
 
-# Verify password
+
+# VERIFY PASSWORD
 def verify_password(
+
     plain_password,
     hashed_password
+
 ):
+
     return pwd_context.verify(
         plain_password,
         hashed_password
     )
 
-# Create JWT token
+
+# CREATE ACCESS TOKEN
 def create_access_token(data: dict):
 
-    expire = datetime.utcnow() + timedelta(hours=24)
+    to_encode = data.copy()
 
-    payload = data.copy()
+    expire = datetime.utcnow() + timedelta(
+        hours=ACCESS_TOKEN_EXPIRE_HOURS
+    )
 
-    payload.update({
+    to_encode.update({
         "exp": expire
     })
 
-    token = jwt.encode(
-        payload,
+    encoded_jwt = jwt.encode(
+
+        to_encode,
+
         SECRET_KEY,
+
         algorithm=ALGORITHM
     )
 
-    return token
+    return encoded_jwt
 
-# Verify token
+
+# VERIFY TOKEN
 def verify_token(token: str):
 
     try:
+
         payload = jwt.decode(
+
             token,
+
             SECRET_KEY,
+
             algorithms=[ALGORITHM]
         )
 
@@ -67,38 +96,77 @@ def verify_token(token: str):
     except JWTError:
 
         raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
+
+            status_code=status.HTTP_401_UNAUTHORIZED,
+
+            detail="Invalid or Expired Token"
         )
 
-# Current user
+
+# GET CURRENT USER
 def get_current_user(
-    credentials = Depends(security)
+
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security
+    )
+
 ):
 
     token = credentials.credentials
 
     payload = verify_token(token)
 
+    print("TOKEN PAYLOAD:", payload)
+
     return payload
 
 
-# Role checker
+# ROLE BASED ACCESS
 def require_role(allowed_roles: list):
 
     def role_checker(
-        current_user: dict = Depends(get_current_user)
+
+        current_user: dict = Depends(
+            get_current_user
+        )
     ):
 
-        user_role = current_user.get("role")
+        print("USER ROLE:", current_user["role"])
+        print("ALLOWED ROLES:", allowed_roles)
 
-        if user_role not in allowed_roles:
+        if current_user["role"] not in allowed_roles:
 
             raise HTTPException(
-                status_code=403,
-                detail="Access denied"
+
+                status_code=status.HTTP_403_FORBIDDEN,
+
+                detail="Access Denied"
             )
 
         return current_user
 
     return role_checker
+
+def verify_token(token: str):
+
+    print("TOKEN RECEIVED:", token)
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        print("PAYLOAD:", payload)
+
+        return payload
+
+    except JWTError as e:
+
+        print("JWT ERROR:", e)
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or Expired Token"
+        )

@@ -72,7 +72,7 @@ function Analytics() {
 
   return (
 
-    <MainLayout>
+    <>
 
       <div className="mb-8">
 
@@ -231,7 +231,7 @@ function Analytics() {
 
       </div>
 
-    </MainLayout>
+    </>
   );
 }
 

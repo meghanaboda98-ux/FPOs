@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-
 import MainLayout from "../layouts/MainLayout";
-
 import StatusBadge from "../components/StatusBadge";
-
+import Notifications from "./Notifications";
+import Profile from "./Profile";
 import {
   getAllAlerts
 } from "../services/alertService";
@@ -37,7 +36,7 @@ function Alerts() {
 
   return (
 
-    <MainLayout>
+    <>
 
       <div className="mb-6">
 
@@ -201,7 +200,7 @@ function Alerts() {
 
       </div>
 
-    </MainLayout>
+    </>
   );
 }
 

@@ -34,7 +34,7 @@ function Products() {
       const data =
         await getAllProducts();
 
-      setProducts(data.products);
+      setProducts(data?.products || []);
 
     }
 
@@ -51,7 +51,7 @@ function Products() {
 
   return (
 
-    <MainLayout>
+  <>
 
       <div className="flex items-center justify-between mb-6">
 
@@ -142,7 +142,7 @@ function Products() {
 
                   </tr>
 
-                ) : products.length === 0 ? (
+                ) :(products?.length || 0) === 0  ? (
 
                   <tr>
 
@@ -227,7 +227,7 @@ function Products() {
         onSuccess={fetchProducts}
       />
 
-    </MainLayout>
+    </>
   );
 }
 

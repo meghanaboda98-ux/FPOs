@@ -1,68 +1,98 @@
-import { Link, useLocation } from "react-router-dom";
+import {
+    Link,
+    useLocation
+} from "react-router-dom";
 
 function Sidebar() {
-  const location = useLocation();
 
-  const role = localStorage.getItem("role");
+    const location = useLocation();
 
-  const menuItems = [
-    {
-      name: "Dashboard",
-      path: "/",
-    },
+    const menuItems = [
 
-    {
-      name: "Inventory",
-      path: "/inventory",
-    },
+        {
+            name: "Dashboard",
+            path: "/dashboard"
+        },
 
-    {
-      name: "Alerts",
-      path: "/alerts",
-    },
-  ];
+        {
+            name: "Inventory",
+            path: "/inventory"
+        },
 
-  if (role === "SUPER_ADMIN" || role === "FPO_MANAGER") {
-    menuItems.push({
-      name: "Analytics",
+        {
+            name: "Products",
+            path: "/products"
+        },
 
-      path: "/analytics",
-    });
+        {
+            name: "Analytics",
+            path: "/analytics"
+        },
 
-    menuItems.push({
-      name: "Products",
+        {
+            name: "Alerts",
+            path: "/alerts"
+        },
 
-      path: "/products",
-    });
-  }
+        {
+            name: "Recommendations",
+            path: "/recommendations"
+        },
 
-  return (
-    <div className="w-64 h-screen bg-white border-r border-gray-200 fixed left-0 top-0">
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="text-xl font-semibold text-gray-800">CAAS</h1>
+        {
+            name: "Shipments",
+            path: "/shipments"
+        },
 
-        <p className="text-sm text-gray-500 mt-1">Cold Storage Platform</p>
-      </div>
+        {
+            name: "Warehouses",
+            path: "/warehouses"
+        },
 
-      <div className="p-4 space-y-2">
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all
-              
-              ${
-                location.pathname === item.path
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-          >
-            {item.name}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+        {
+            name: "Notifications",
+            path: "/notifications"
+        },
+
+        {
+            name: "Profile",
+            path: "/profile"
+        }
+    ];
+
+    return (
+
+        <div className="w-64 bg-blue-900 text-white min-h-screen p-5">
+
+            <h1 className="text-3xl font-bold mb-10">
+                CAAS
+            </h1>
+
+            <div className="flex flex-col gap-2">
+
+                {
+                    menuItems.map((item) => (
+
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`px-4 py-3 rounded-lg transition-all
+                            ${
+                                location.pathname === item.path
+                                ? "bg-white text-blue-900 font-semibold"
+                                : "hover:bg-blue-800"
+                            }`}
+                        >
+                            {item.name}
+                        </Link>
+
+                    ))
+                }
+
+            </div>
+
+        </div>
+    );
 }
 
 export default Sidebar;

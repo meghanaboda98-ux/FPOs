@@ -1,100 +1,124 @@
 import { useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import { loginUser } from "../services/authService";
-
-import { saveToken, saveRole } from "../utils/auth";
+import { saveToken } from "../utils/auth";
 
 function Login() {
-  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+    const navigate = useNavigate();
 
-  const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const [formData, setFormData] = useState({
+        email: "",
+        password: ""
     });
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleChange = (e) => {
 
-    try {
-      const data = await loginUser(formData);
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+    };
 
-      saveToken(data.access_token);
+    const handleSubmit = async (e) => {
 
-      saveRole(data.role);
+        e.preventDefault();
 
-      navigate("/");
-    } catch (error) {
-      setError(error.response?.data?.detail || "Login failed");
-    }
-  };
+        try {
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white w-full max-w-md rounded-2xl border border-gray-200 shadow-sm p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">CAAS Login</h1>
+            const response = await loginUser(formData);
 
-          <p className="text-gray-500 mt-1">Cold Storage Management Platform</p>
-        </div>
+            console.log("LOGIN RESPONSE:", response);
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Email</label>
+            if (response.access_token) {
 
-            <input
-              type="email"
-              name="email"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
+                saveToken(
+                    response.access_token,
+                    response.user?.role || "",
+                    response.user?.name || ""
+                );
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-2">Password</label>
+                alert("Login Successful");
 
-            <input
-              type="password"
-              name="password"
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-blue-500"
-              required
-            />
-          </div>
+                navigate("/dashboard");
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
+            } else {
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-all"
-          >
-            Login
-          </button>
+                alert("Access token missing");
+            }
 
-          <div className="text-center text-sm text-gray-500 pt-2">
-            Don’t have an account?
-            <span
-              onClick={() => navigate("/register")}
-              className="text-blue-600 cursor-pointer ml-1"
+        } catch (error) {
+
+            console.log("LOGIN ERROR:", error);
+
+            alert(
+                error?.response?.data?.detail ||
+                "Invalid Credentials"
+            );
+        }
+    };
+
+    return (
+
+        <div className="min-h-screen flex justify-center items-center bg-gray-100">
+
+            <form
+                onSubmit={handleSubmit}
+                className="bg-white p-8 rounded shadow-md w-96"
             >
-              Register
-            </span>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+
+                <h2 className="text-2xl font-bold mb-6 text-center">
+
+                    Login
+
+                </h2>
+
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                    required
+                />
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full border p-3 mb-4 rounded"
+                    required
+                />
+
+                <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white p-3 rounded"
+                >
+
+                    Login
+
+                </button>
+
+                <p className="text-center mt-4">
+
+                    New User?
+
+                    <span
+                        className="text-blue-600 cursor-pointer ml-2 font-semibold"
+                        onClick={() => navigate("/register")}
+                    >
+                        Register Here
+                    </span>
+
+                </p>
+
+            </form>
+
+        </div>
+    );
 }
 
 export default Login;

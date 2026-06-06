@@ -1,14 +1,12 @@
-from database import db
-from passlib.context import CryptContext
+from database import SessionLocal
+from models.user_model import User
+from auth import hash_password
+db = SessionLocal()
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+# =========================================
+# ADMIN DETAILS
+# =========================================
 
-users_collection = db["users"]
-
-# Admin details
 admin_data = {
     "name": "Super Admin",
     "email": "admin@gmail.com",
@@ -16,29 +14,36 @@ admin_data = {
     "role": "SUPER_ADMIN"
 }
 
-# Check if admin already exists
-existing_admin = users_collection.find_one({
-    "email": admin_data["email"]
-})
+# =========================================
+# CHECK IF ADMIN EXISTS
+# =========================================
+existing_admin = db.query(User).filter(
+    User.email == admin_data["email"]
+
+).first()
 
 if existing_admin:
     print("Admin already exists")
 
+
 else:
-    # Hash password
-    hashed_password = pwd_context.hash(
+    hashed_password = hash_password(
         admin_data["password"]
     )
 
-    # Create admin document
-    new_admin = {
-        "name": admin_data["name"],
-        "email": admin_data["email"],
-        "password": hashed_password,
-        "role": admin_data["role"]
-    }
+    new_admin = User(
+        name=admin_data["name"],
+        email=admin_data["email"],
+        password=hashed_password,
+        role=admin_data["role"]
+    )
 
-    # Insert into MongoDB
-    users_collection.insert_one(new_admin)
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+    print(
+        "SUPER_ADMIN seeded successfully"
+    )
 
-    print("SUPER_ADMIN seeded successfully")
+
+db.close()

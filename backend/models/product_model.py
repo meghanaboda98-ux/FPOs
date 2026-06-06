@@ -1,17 +1,36 @@
-from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String, Float
+from database import Base
 
-class ProductCreate(BaseModel):
+class Product(Base):
+    __tablename__ = "products"
 
-    product_name: str
+    id = Column(
+        Integer,
+        primary_key=True
+    )
 
-    category: str
+    name = Column(String)
 
-    optimal_temp: float
+    category = Column(String)
 
-    model: str
+    optimal_temperature = Column(Float)
 
-    k_ref: float
+    humidity = Column(Float)
 
-    Ea: float
+    shelf_life = Column(Integer)
 
-    quality_limit: float
+    respiration_rate = Column(Float)
+
+    storage_type = Column(String)
+
+    min_temperature = Column(Float)
+
+    max_temperature = Column(Float)
+
+    quality_threshold = Column(Float)
+    
+    model = Column(String)
+
+    k_ref = Column(Float)
+
+    Ea = Column(Float)
